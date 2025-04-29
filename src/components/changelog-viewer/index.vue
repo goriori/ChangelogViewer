@@ -1,15 +1,20 @@
 <script setup lang="ts">
-import useChangelog from '@/composables/useChangelog';
+import { onMounted } from "vue";
+import useChangelog from "@/composables/useChangelog";
 
 const props = defineProps({
   path: {
     type: String,
     required: true,
-    default: '/changelog.md',
+    default: "/changelog.md",
   },
 });
 
-const { changelogData, error, isLoading } = useChangelog(props.path);
+const { changelogData, error, isLoading, fetchChangelog } = useChangelog();
+// Загружаем при монтировании
+onMounted(() => {
+  fetchChangelog(props.path);
+});
 </script>
 
 <template>
@@ -18,36 +23,51 @@ const { changelogData, error, isLoading } = useChangelog(props.path);
 
     <!-- Загрузка -->
     <div v-if="isLoading" class="text-center py-12">
-      <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
+      <div
+        class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"
+      ></div>
     </div>
 
     <!-- Ошибка -->
-    <div 
-      v-else-if="error" 
-      class="bg-red-50 border-l-4 border-red-500 p-4 mb-6"
-    >
+    <div v-else-if="error" class="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
       <p class="text-red-700 font-medium">{{ error }}</p>
-      <p class="text-red-600 text-sm mt-1">Проверьте формат файла changelog.md</p>
+      <p class="text-red-600 text-sm mt-1">
+        Проверьте формат файла changelog.md
+      </p>
     </div>
 
     <!-- Успешная загрузка -->
     <div v-else class="space-y-8">
-      <div 
-        v-for="(entry, index) in changelogData" 
-        :key="index" 
-        class="border-b border-gray-200 pb-6 last:border-0"
-      >
-        <div class="flex items-baseline gap-2">
-          <h2 class="text-xl font-semibold text-gray-800">{{ entry.title }}</h2>
-          <span class="text-sm text-gray-500">{{ entry.date }}</span>
-        </div>
-
-        <!-- Выводим HTML-описание (списки уже обработаны) -->
-        <div 
-          class="mt-4 text-gray-600"
-          v-html="entry.htmlDescription"
-        />
+      <div v-for="entry in changelogData" :key="entry.date">
+        <h2>
+          {{ entry.title }} <small>{{ entry.date }}</small>
+        </h2>
+        <div v-html="entry.htmlContent" class="markdown-content" />
       </div>
     </div>
   </div>
 </template>
+
+<style>
+.markdown-body {
+  color: #4b5563; /* gray-600 */
+}
+
+.markdown-body h3 {
+  font-size: 1.125rem; /* text-lg */
+  font-weight: 600; /* font-semibold */
+  margin-top: 1rem; /* mt-4 */
+  margin-bottom: 0.5rem; /* mb-2 */
+  color: #1f2937; /* gray-800 */
+}
+
+.markdown-body ul {
+  padding-left: 1.25rem; /* pl-5 */
+  list-style-type: disc; /* list-disc */
+}
+
+.markdown-body ol {
+  padding-left: 1.25rem; /* pl-5 */
+  list-style-type: decimal; /* list-decimal */
+}
+</style>

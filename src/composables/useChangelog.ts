@@ -1,80 +1,94 @@
 import { ref, computed } from 'vue';
+import { marked } from 'marked';
+import hljs from 'highlight.js';
+import 'highlight.js/styles/github-dark.css';
 
 interface ChangelogEntry {
-  date?: string;
-  title?: string;
-  description?: string;
-  htmlDescription?: string; // Добавляем HTML-версию описания
+  date: string;
+  title: string;
+  description: string;
+  htmlDescription: string;
 }
 
-export default function useChangelog(path: string) {
+// Инициализация marked с подсветкой кода
+marked.setOptions({
+  highlight: (code, lang) => {
+    if (lang && hljs.getLanguage(lang)) {
+      return hljs.highlight(lang, code).value;
+    }
+    return hljs.highlightAuto(code).value;
+  },
+  breaks: true,
+});
+
+export default function useChangelog() {
   const changelogData = ref<ChangelogEntry[]>([]);
   const error = ref<string | null>(null);
   const isLoading = ref(true);
 
-  // Преобразуем Markdown-списки в HTML
-  const parseMarkdownLists = (text: string): string => {
-    // Обрабатываем ненумерованные списки (-, *, +)
-    let html = text.replace(/^-\s(.+)$/gm, '<li>$1</li>');
-    html = html.replace(/^[*+]\s(.+)$/gm, '<li>$1</li>');
-    
-    // Обрабатываем нумерованные списки (1., 2.)
-    html = html.replace(/^\d+\.\s(.+)$/gm, '<li>$1</li>');
-    
-    // Обернём все li в ul или ol
-    html = html.replace(/<li>.*<\/li>/gms, (match) => {
-      // Если перед списком есть цифра (1., 2.), то это <ol>
-      const isOrdered = /^\d+\.\s.+$/m.test(match);
-      return isOrdered 
-        ? `<ol class="list-decimal pl-5 my-2">${match}</ol>`
-        : `<ul class="list-disc pl-5 my-2">${match}</ul>`;
+  const parseChangelog = (rawText: string): ChangelogEntry[] => {
+    // Используем marked.lexer для получения AST
+    const tokens = marked.lexer(rawText);
+    const entries: ChangelogEntry[] = [];
+    let currentEntry: Partial<ChangelogEntry> = {};
+
+    tokens.forEach(token => {
+      if (token.type === 'heading' && token.depth === 2) {
+        // Завершаем предыдущую запись если есть
+        if (currentEntry.title) {
+          entries.push(currentEntry as ChangelogEntry);
+        }
+        
+        // Парсим новый заголовок: "Название [YYYY-MM-DD]"
+        const match = token.text.match(/^(.*?)\s*\[(\d{4}-\d{2}-\d{2})\]/);
+        if (match) {
+          currentEntry = {
+            title: match[1].trim(),
+            date: match[2].trim(),
+            htmlContent: ''
+          };
+        }
+      } else if (currentEntry.title) {
+        // Добавляем контент к текущей записи
+        currentEntry.htmlContent += marked.parser([token]);
+      }
     });
 
-    // Простые переносы строк -> <br> (опционально)
-    html = html.replace(/\n/g, '<br>');
+    // Добавляем последнюю запись
+    if (currentEntry.title) {
+      entries.push(currentEntry as ChangelogEntry);
+    }
 
-    return html;
+    return entries;
   };
 
-  const fetchChangelog = async () => {
+  const fetchChangelog = async (path: string) => {
     try {
-      const response = await fetch(path);
-      if (!response.ok) throw new Error("Не удалось загрузить changelog");
+      isLoading.value = true;
+      error.value = null;
       
-      const rawText = await response.text();
-      const entries = rawText.split('## ').slice(1);
-
-      changelogData.value = entries.map((entry) => {
-        const [firstLine, ...rest] = entry.trim().split('\n');
-        const titleMatch = firstLine.match(/^(.*?)\s*\[(\d{4}-\d{2}-\d{2})\]/);
-
-        if (!titleMatch) {
-          throw new Error(`Неверный формат записи: "${firstLine}"`);
-        }
-
-        const description = rest.join('\n').trim();
-        const htmlDescription = parseMarkdownLists(description);
-
-        return {
-          title: titleMatch[1].trim(),
-          date: titleMatch[2].trim(),
-          description,
-          htmlDescription, // Добавляем HTML-версию
-        };
-      });
+      const response = await fetch(path);
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      
+      const text = await response.text();
+      changelogData.value = parseChangelog(text);
+    console.log(changelogData.value);
+    
+    
     } catch (err) {
-      error.value = err instanceof Error ? err.message : "Неизвестная ошибка";
+      error.value = err instanceof Error 
+        ? err.message 
+        : 'Неизвестная ошибка при загрузке changelog';
+      console.error('Changelog error:', err);
     } finally {
       isLoading.value = false;
     }
   };
 
-  fetchChangelog();
-
   return {
-    changelogData: computed(() => changelogData.value),
+    changelogData,
     error,
     isLoading,
-    reload: fetchChangelog,
+    fetchChangelog, 
   };
 }
