@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted } from "vue";
 import useChangelog from "@/composables/useChangelog";
-
+import Timeline from "@/components/timeline/index.vue";
 const props = defineProps({
   path: {
     type: String,
@@ -11,6 +11,7 @@ const props = defineProps({
 });
 
 const { changelogData, error, isLoading, fetchChangelog } = useChangelog();
+
 // Загружаем при монтировании
 onMounted(() => {
   fetchChangelog(props.path);
@@ -18,31 +19,39 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="max-w-3xl mx-auto px-4 py-8">
-    <h1 class="text-3xl font-bold mb-8 text-gray-900">Changelog</h1>
+  <div class="max-w-3xl mx-auto px-4 py-8 relative">
+    <Timeline class="h-full " />
+    <div>
+      <!-- Загрузка -->
+      <div v-if="isLoading" class="text-center py-12">
+        <div
+          class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"
+        ></div>
+      </div>
 
-    <!-- Загрузка -->
-    <div v-if="isLoading" class="text-center py-12">
+      <!-- Ошибка -->
       <div
-        class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"
-      ></div>
-    </div>
+        v-else-if="error"
+        class="bg-red-50 border-l-4 border-red-500 p-4 mb-6"
+      >
+        <p class="text-red-700 font-medium">{{ error }}</p>
+        <p class="text-red-600 text-sm mt-1">
+          Проверьте формат файла changelog.md
+        </p>
+      </div>
 
-    <!-- Ошибка -->
-    <div v-else-if="error" class="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
-      <p class="text-red-700 font-medium">{{ error }}</p>
-      <p class="text-red-600 text-sm mt-1">
-        Проверьте формат файла changelog.md
-      </p>
-    </div>
-
-    <!-- Успешная загрузка -->
-    <div v-else class="space-y-8">
-      <div v-for="entry in changelogData" :key="entry.date">
-        <h2>
-          {{ entry.title }} <small>{{ entry.date }}</small>
-        </h2>
-        <div v-html="entry.htmlContent" class="markdown-content" />
+      <!-- Успешная загрузка -->
+      <div v-else class="space-y-8">
+        <div
+          v-for="entry in changelogData"
+          :key="entry.date"
+          class="dark:text-gray-300 space-y-3 "
+        >
+          <h2 class="text-2xl font-bold">
+            {{ entry.title }} <small>{{ entry.date }}</small>
+          </h2>
+          <div v-html="entry.htmlContent" class="markdown-content" />
+        </div>
       </div>
     </div>
   </div>

@@ -1,7 +1,7 @@
-import { ref, computed } from 'vue';
-import { marked } from 'marked';
-import hljs from 'highlight.js';
-import 'highlight.js/styles/github-dark.css';
+import { ref, computed } from "vue";
+import { marked } from "marked";
+import hljs from "highlight.js";
+import "highlight.js/styles/github-dark.css";
 
 interface ChangelogEntry {
   date: string;
@@ -32,20 +32,20 @@ export default function useChangelog() {
     const entries: ChangelogEntry[] = [];
     let currentEntry: Partial<ChangelogEntry> = {};
 
-    tokens.forEach(token => {
-      if (token.type === 'heading' && token.depth === 2) {
+    tokens.forEach((token) => {
+      if (token.type === "heading" && token.depth === 2) {
         // Завершаем предыдущую запись если есть
         if (currentEntry.title) {
           entries.push(currentEntry as ChangelogEntry);
         }
-        
+
         // Парсим новый заголовок: "Название [YYYY-MM-DD]"
         const match = token.text.match(/^(.*?)\s*\[(\d{4}-\d{2}-\d{2})\]/);
         if (match) {
           currentEntry = {
             title: match[1].trim(),
             date: match[2].trim(),
-            htmlContent: ''
+            htmlContent: "",
           };
         }
       } else if (currentEntry.title) {
@@ -66,20 +66,19 @@ export default function useChangelog() {
     try {
       isLoading.value = true;
       error.value = null;
-      
+
       const response = await fetch(path);
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      
+      if (!response.ok)
+        throw new Error(`HTTP error! status: ${response.status}`);
+
       const text = await response.text();
       changelogData.value = parseChangelog(text);
-    console.log(changelogData.value);
-    
-    
     } catch (err) {
-      error.value = err instanceof Error 
-        ? err.message 
-        : 'Неизвестная ошибка при загрузке changelog';
-      console.error('Changelog error:', err);
+      error.value =
+        err instanceof Error
+          ? err.message
+          : "Неизвестная ошибка при загрузке changelog";
+      console.error("Changelog error:", err);
     } finally {
       isLoading.value = false;
     }
@@ -89,6 +88,6 @@ export default function useChangelog() {
     changelogData,
     error,
     isLoading,
-    fetchChangelog, 
+    fetchChangelog,
   };
 }
