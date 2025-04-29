@@ -6,7 +6,7 @@ const props = defineProps({
   path: {
     type: String,
     required: true,
-    default: "/changelog.md",
+    default: "/CHANGELOG.md",
   },
 });
 

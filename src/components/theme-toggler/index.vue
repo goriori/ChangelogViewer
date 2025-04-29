@@ -1,7 +1,7 @@
 <template>
     <button
       @click="toggleDarkMode"
-      class="fixed top-4 right-4 p-2 bg-gray-200 dark:bg-gray-700 rounded-full"
+      class="fixed top-4 right-4 p-2 bg-gray-200 dark:bg-gray-700 rounded-full cursor-pointer"
       aria-label="Переключить тему"
     >
       <svg

@@ -10,7 +10,7 @@
         <pattern id=":S4:" width="6" height="8" patternUnits="userSpaceOnUse">
           <path
             d="M0 0H6M0 8H6"
-            class="stroke-sky-900/10 xl:stroke-white/10 dark:stroke-white/10"
+            class="stroke-sky-900/20 dark:stroke-white/10"
             fill="none"
           ></path>
         </pattern>
